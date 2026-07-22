@@ -1,0 +1,114 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <time.h>
+void print_string_as_binary(const char *str, int len) {
+    for (int i = 0; i < len; i++) {
+        for (int b = 7; b >= 0; b--) {
+            printf("%d", (str[i] >> b) & 1);
+        }
+        printf(" ");
+    }
+    printf("\n");
+}
+int main()
+{
+    char flag = 'F';
+    char esc = 'E';
+    char text[100];
+    char stuffed[200];
+    char transmitted[200];
+    char received_stuffed[200];
+    char destuffed[100];
+    int i, j = 0, error_choice;
+    srand(time(NULL));
+    printf("\nEnter String: ");
+    scanf(" %[^\n]", text);
+    printf("\nBYTE STUFFING\n");
+    printf("The entered input is: %s\n", text);
+    printf("Original Text in Binary: ");
+    print_string_as_binary(text, strlen(text));
+    printf("\nFlag byte: '%c' (Binary: ", flag);
+    print_string_as_binary(&flag, 1);
+    printf("Escape byte: '%c' (Binary: ", esc);
+    print_string_as_binary(&esc, 1);
+    printf("\nSENDER SIDE\n");
+    for (i = 0; text[i] != '\0'; i++)
+    {
+        if (text[i] == flag || text[i] == esc)
+        {
+            stuffed[j++] = esc;
+        }
+        stuffed[j++] = text[i];
+    }
+    stuffed[j] = '\0';
+    int stuffed_len = j;
+    int t = 0;
+    transmitted[t++] = flag;
+    for (int k = 0; k < stuffed_len; k++) {
+        transmitted[t++] = stuffed[k];
+    }
+    transmitted[t++] = flag;
+    transmitted[t] = '\0';
+    int trans_len = t;
+    print_string_as_binary(stuffed, stuffed_len);
+    printf("\nSender Output Text): %s\n", transmitted);
+    printf("Sender Output Binary): ");
+    print_string_as_binary(transmitted, trans_len);
+    printf("Choose a state:\n");
+    printf(" 0. Perfect Transmission\n");
+    printf(" 1. Inject Random Single-Character Error\n");
+    printf("Enter Choice: ");
+    scanf("%d", &error_choice);
+    if (error_choice == 1)
+    {
+        if (stuffed_len > 0)
+        {
+            int random_pos = 1 + (rand() % stuffed_len);
+            transmitted[random_pos] = 'X';
+            printf(">>> Channel error at index %d changed to 'X' <<<\n", random_pos - 1);
+        }
+    }
+    else
+    {
+        printf(">>> Clean frame transmission<<<\n");
+    }
+    printf("\nRECEIVER OUTPUT\n");
+    printf("Received Text: %s\n", transmitted);
+    printf("Received Binary: ");
+    print_string_as_binary(transmitted, trans_len);
+    int error_detected = 0;
+    if (transmitted[0] != flag || transmitted[trans_len - 1] != flag) {
+        error_detected = 1;
+    }
+    int rx_stuffed_len = 0;
+    for (i = 1; i < trans_len - 1; i++)
+    {
+        if (transmitted[i] == 'X') {
+            error_detected = 1;
+        }
+        received_stuffed[rx_stuffed_len++] = transmitted[i];
+    }
+    received_stuffed[rx_stuffed_len] = '\0';
+    if (error_detected) {
+        printf("\nError detected.");
+        printf("Message discarded\n");
+    }
+    else {
+        j = 0;
+        for (i = 0; received_stuffed[i] != '\0'; i++)
+        {
+            if (received_stuffed[i] == esc)
+            {
+                i++;
+            }
+            destuffed[j++] = received_stuffed[i];
+        }
+        destuffed[j] = '\0';
+        printf("\nDestuffed successfully.\n");
+        printf("Receiver Output (Decoded Text): %s\n", destuffed);
+        printf("Receiver Output (Decoded Binary): ");
+        print_string_as_binary(destuffed, j);
+    }
+    return 0;
+}
