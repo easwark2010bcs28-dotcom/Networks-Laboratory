@@ -1,0 +1,142 @@
+#include <stdio.h>
+#include <string.h>
+void binary_to_ascii(const char *binary, char *output_text)
+{
+    int i, bit;
+    int text_idx = 0;
+    for (i = 0; binary[i] != '\0'; i += 8)
+    {
+        if (strlen(&binary[i]) < 8) break;
+        char ch = 0;
+        for (bit = 0; bit < 8; bit++)
+        {
+            ch <<= 1;
+            if (binary[i + bit] == '1')
+            {
+                ch |= 1;
+            }
+        }
+        output_text[text_idx++] = ch;
+    }
+    output_text[text_idx] = '\0';
+}
+int main()
+{
+    char flag[] = "01111110";
+    char text[50];
+    char data[400];
+    char stuffed[500];
+    char transmitted[600];
+    char destuffed[400];
+    char recovered_text[50];
+    int i, j = 0, count = 0;
+    int bin_idx = 0;
+    int bit, error_choice;
+    printf("Enter String: ");
+    scanf(" %[^\n]", text);
+    printf("\nBIT STUFFING\n");
+    printf("The entered input is: %s\n", text);
+    for(i = 0; text[i] != '\0'; i++)
+    {
+        char ch = text[i];
+        for(bit = 7; bit >= 0; bit--)
+        {
+            if((ch >> bit) & 1)
+                data[bin_idx++] = '1';
+            else
+                data[bin_idx++] = '0';
+        }
+    }
+    data[bin_idx] = '\0';
+    printf("The binary conversion of the string is: %s\n", data);
+    printf("\nSENDER SIDE\n");
+    printf("Before stuffing: %s%s%s\n", flag, data, flag);
+    for(i = 0; data[i] != '\0'; i++){
+        stuffed[j++] = data[i];
+        if(data[i] == '1'){
+            count++;
+            if(count == 5){
+                stuffed[j++] = '0';
+                count = 0;
+            }
+        }
+        else{
+            count = 0;
+        }
+    }
+    stuffed[j] = '\0';
+    strcpy(transmitted, flag);
+    strcat(transmitted, stuffed);
+    strcat(transmitted, flag);
+    printf("After stuffing\n");
+    printf("Sender Output (Transmitted Frame): %s\n", transmitted);
+    printf("Choose a state:\n");
+    printf(" 0. Perfect Transmission\n");
+    printf(" 1. Inject Single-Bit Error\n");
+    printf("Enter Choice: ");
+    scanf("%d", &error_choice);
+    int was_error_injected = 0;
+    if (error_choice == 1)
+    {
+        int flip_pos = 12;
+        transmitted[flip_pos] = 'A';
+        was_error_injected = 1;
+        printf("Simulated error at index %d changed to 'A' <<<\n", flip_pos);
+    }
+    else if(error_choice == 0)
+    {
+        printf(">>> Correct Frame <<<\n");
+    }
+    else {
+        printf("Invalid choice\n");
+    }
+    printf("\nRECEIVER OUTPUT\n");
+    printf("Received bits:        %s\n", transmitted);
+    int error_detected = 0;
+    int trans_len = strlen(transmitted);
+    char received_stuffed[500];
+    if (strncmp(transmitted, flag, 8) != 0 || strncmp(&transmitted[trans_len - 8], flag, 8) != 0) {
+        error_detected = 1;
+    }
+    for(i = 8; i < trans_len - 8; i++)
+    {
+        if (transmitted[i] == 'X') {
+            error_detected = 1;
+        }
+        received_stuffed[i - 8] = transmitted[i];
+    }
+    received_stuffed[trans_len - 16] = '\0';
+    if (error_detected)
+    {
+        printf("\nError detected\n");
+        printf("Message Discarded \n");
+    }
+    else
+    {
+        count = 0;
+        j = 0;
+        for(i = 0; received_stuffed[i] != '\0'; i++)
+        {
+            destuffed[j++] = received_stuffed[i];
+
+            if(received_stuffed[i] == '1')
+            {
+                count++;
+                if(count == 5)
+                {
+                    i++;
+                    count = 0;
+                }
+            }
+            else
+            {
+                count = 0;
+            }
+        }
+        destuffed[j] = '\0';
+        binary_to_ascii(destuffed, recovered_text);
+        printf("Receiver Output (Binary Data):  %s\n", destuffed);
+        printf("Recovered word:                 %s\n", recovered_text);
+    }
+    return 0;
+}
